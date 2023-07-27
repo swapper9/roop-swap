@@ -36,7 +36,7 @@ in a handy conda environment. This not only installs the application but also ru
 
 For other OS or if you'd rather like to do this by yourself then:
 
-- `git clone https://github.com/C0untFloyd/roop-unleashed`
+- `git clone https://github.com/swapper9/roop-swap`
 - `pip install -r requirements.txt`
 
 Depending on your system and available GPU there are different packages you need to install and different commandline args. Here are the instructions from the original roop page:
@@ -130,6 +130,11 @@ Image Credits: Alamy, Wikipedia, Imago
 ### FAQ
 
 ### Changelog
+
+**28.7.2023** v3.0.0
+
+- Changed frame processing from reading-writing files to disk to in-memory processing 
+- Changed face_enhancer frame-processor to process only frames that were previously changed by face_swapper frame-processor  
 
 **9.7.2023** v2.0.3
 

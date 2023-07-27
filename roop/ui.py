@@ -9,7 +9,6 @@ from typing import Callable, Tuple
 from PIL import Image, ImageOps
 from roop.face_analyser import get_many_faces, get_one_face, extract_face_images
 from roop.capturer import get_video_frame, get_video_frame_total
-#from roop.predicter import predict_frame
 from roop.processors.frame.core import get_frame_processors_modules
 from roop.utilities import is_image, is_video, resolve_relative_path, open_with_default_app, compute_cosine_distance, has_extension
 
@@ -119,7 +118,7 @@ def create_root(start: Callable, destroy: Callable) -> ctk.CTk:
     donate_label = ctk.CTkLabel(root, text='Visit the Github Page', justify='center', cursor='hand2')
     donate_label.place(relx=0.1, rely=0.95, relwidth=0.8)
     donate_label.configure(text_color=ctk.ThemeManager.theme.get('RoopDonate').get('text_color'))
-    donate_label.bind('<Button>', lambda event: webbrowser.open('https://github.com/C0untFloyd/roop-unleashed'))
+    donate_label.bind('<Button>', lambda event: webbrowser.open('https://github.com/swapper9/roop-swap'))
 
     return root
 
@@ -316,6 +315,7 @@ def toggle_preview() -> None:
 
 
 def init_preview() -> None:
+    roop.globals.swap_face_frames = [int]
     if is_image(roop.globals.target_path):
         preview_slider.pack_forget()
     if is_video(roop.globals.target_path):
@@ -333,7 +333,7 @@ def update_preview(frame_number: int = 0) -> None:
             if frame_processor.NAME == 'ROOP.FACE-ENHANCER':
                 continue
 
-            temp_frame = frame_processor.process_frame(source_face=roop.globals.SELECTED_FACE_DATA_INPUT, target_face=roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame=temp_frame)
+            temp_frame = frame_processor.process_frame(source_face=roop.globals.SELECTED_FACE_DATA_INPUT, target_face=roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame=temp_frame, frame_number=1)
             image = Image.fromarray(cv2.cvtColor(temp_frame, cv2.COLOR_BGR2RGB))
             image = ImageOps.contain(image, (PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT), Image.LANCZOS)
             image = ctk.CTkImage(image, size=image.size)
