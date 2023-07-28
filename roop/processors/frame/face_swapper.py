@@ -8,7 +8,8 @@ import roop.processors.frame.core
 from roop.core import update_status
 from roop.face_analyser import get_one_face, get_many_faces
 from roop.typing import Face, Frame
-from roop.utilities import conditional_download, resolve_relative_path, is_image, is_video, compute_cosine_distance, get_destfilename_from_path
+from roop.utilities import conditional_download, resolve_relative_path, is_image, is_video, compute_cosine_distance, \
+    get_destfilename_from_path, from_path_to_array_index
 
 FACE_SWAPPER = None
 THREAD_LOCK = threading.Lock()
@@ -56,7 +57,7 @@ def swap_face(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
     return get_face_swapper().get(temp_frame, target_face, source_face, paste_back=True)
 
 
-def process_frame(source_face: Face, target_face: Face, temp_frame: Frame) -> Frame:
+def process_frame(source_face: Face, target_face: Face, temp_frame: Frame, frame_number: int) -> Frame:
     global DIST_THRESHOLD
 
     if roop.globals.many_faces:
@@ -65,6 +66,7 @@ def process_frame(source_face: Face, target_face: Face, temp_frame: Frame) -> Fr
             for target_face in many_faces:
                 if target_face['det_score'] > 0.65:
                     temp_frame = swap_face(source_face, target_face, temp_frame)
+                    roop.globals.swap_face_frames.append(frame_number)
     else:
         if target_face:
             target_embedding = target_face.embedding
@@ -77,26 +79,30 @@ def process_frame(source_face: Face, target_face: Face, temp_frame: Frame) -> Fr
                     break
             if target_face:
                 temp_frame = swap_face(source_face, target_face, temp_frame)
+                roop.globals.swap_face_frames.append(frame_number)
             return temp_frame
                     
         target_face = get_one_face(temp_frame)
         if target_face:
             temp_frame = swap_face(source_face, target_face, temp_frame)
+            roop.globals.swap_face_frames.append(frame_number)
     return temp_frame
-
 
 
 def process_frames(is_batch: bool, source_face: Face, target_face: Face, temp_frame_paths: List[str], update: Callable[[], None]) -> None:
     for temp_frame_path in temp_frame_paths:
-        temp_frame = cv2.imread(temp_frame_path)
+        frame_number = from_path_to_array_index(temp_frame_path)
+        temp_frame = roop.globals.temp_frames_buffer[frame_number]
+        # temp_frame = cv2.imread(temp_frame_path)
         if temp_frame is not None:
-            result = process_frame(source_face, target_face, temp_frame)
+            result = process_frame(source_face, target_face, temp_frame, frame_number)
             if result is not None:
                 if is_batch:
                     tf = get_destfilename_from_path(temp_frame_path, roop.globals.output_path, '_fake.png')
+                    # todo: inmemory
                     cv2.imwrite(tf, result)
                 else:
-                    cv2.imwrite(temp_frame_path, result)
+                    roop.globals.temp_frames_buffer[from_path_to_array_index(temp_frame_path)] = result
         if update:
             update()
 
@@ -104,11 +110,11 @@ def process_frames(is_batch: bool, source_face: Face, target_face: Face, temp_fr
 def process_image(source_face: Any, target_face: Any, target_path: str, output_path: str) -> None:
     global DIST_THRESHOLD
 
-    target_frame = cv2.imread(target_path)
+    target_frame = roop.globals.temp_frames_buffer[from_path_to_array_index(target_path)]
     if target_frame is not None:
         result = process_frame(source_face, target_face, target_frame)
         if result is not None:
-            cv2.imwrite(output_path, result)
+            roop.globals.temp_frames_buffer[from_path_to_array_index(output_path)] = result
 
 
 def process_video(source_face: Any, target_face: Any, temp_frame_paths: List[str]) -> None:

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-
+import gc
 import os
 import sys
 # single thread doubles cuda performance - needs to be set before torch import
@@ -21,7 +21,10 @@ import roop.globals
 import roop.metadata
 import roop.ui as ui
 from roop.processors.frame.core import get_frame_processors_modules
-from roop.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path, has_extension
+from roop.utilities import has_image_extension, is_image, is_video, detect_fps, create_video, extract_frames, \
+    get_temp_frame_paths, restore_audio, create_temp, move_temp, clean_temp, normalize_output_path, has_extension, \
+    read_source_params, extract_frames_to_buffer, write_video, split_video, \
+    concatenate_temp_video_parts, get_virtual_paths_list
 from roop.face_analyser import extract_face_images
 
 if 'ROCMExecutionProvider' in roop.globals.execution_providers:
@@ -74,6 +77,7 @@ def parse_args() -> None:
     roop.globals.video_encoder = args.video_encoder
     roop.globals.video_quality = args.video_quality
     roop.globals.max_memory = args.max_memory
+    roop.globals.max_memory_bytes = roop.globals.max_memory_bytes = args.max_memory * 1024 * 1024 * 1024
     roop.globals.execution_providers = decode_execution_providers(args.execution_provider)
     roop.globals.execution_threads = args.execution_threads
 
@@ -147,7 +151,6 @@ def update_status(message: str, scope: str = 'ROOP.CORE') -> None:
         ui.update_status(message)
 
 
-
 def start() -> None:
     if roop.globals.headless:
         faces = extract_face_images(roop.globals.source_path,  (False, 0))
@@ -167,6 +170,9 @@ def start() -> None:
             return
 
     current_target = roop.globals.target_path
+
+    update_status('Reading source parameters and detecting fps...')
+    read_source_params()
 
     # process image to image
     if has_image_extension(current_target):
@@ -190,26 +196,49 @@ def start() -> None:
     update_status('Creating temp resources...')
     create_temp(current_target)
     update_status('Extracting frames...')
-    extract_frames(current_target)
-    temp_frame_paths = get_temp_frame_paths(current_target)
 
-    for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
-        if frame_processor.NAME == 'ROOP.FACE-ENHANCER' and roop.globals.selected_enhancer == 'None':
-            continue
+    # checking do we need to split video to parts to process separately if we have not enough RAM
+    parts, frames_in_part = split_video()
+    part_numbers = []
+    for part in range(parts):
+        roop.globals.swap_face_frames = []
+        part_numbers.append(str(part))
+        begin_frame = part * frames_in_part
+        end_frame = (part + 1) * frames_in_part
+        if end_frame > roop.globals.frame_count:
+            end_frame = roop.globals.frame_count
+        if parts > 1:
+            update_status(f'Processing part: {part + 1} of {parts}...')
+        extract_frames_to_buffer(begin_frame, end_frame)
+        temp_frame_paths = get_virtual_paths_list(current_target)
 
-        update_status(f'{frame_processor.NAME} in progress...')
-        frame_processor.process_video(roop.globals.SELECTED_FACE_DATA_INPUT, roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame_paths)
-        frame_processor.post_process()
-        release_resources()
-    # handles fps
-    if roop.globals.keep_fps:
-        update_status('Detecting fps...')
-        fps = detect_fps(roop.globals.target_path)
-        update_status(f'Creating video with {fps} fps...')
-        create_video(current_target, fps)
-    else:
-        update_status('Creating video with 30.0 fps...')
-        create_video(current_target)
+        for frame_processor in get_frame_processors_modules(roop.globals.frame_processors):
+            if frame_processor.NAME == 'ROOP.FACE-ENHANCER' and roop.globals.selected_enhancer == 'None':
+                continue
+            update_status(f'{frame_processor.NAME} in progress...')
+            frame_processor.process_video(roop.globals.SELECTED_FACE_DATA_INPUT, roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame_paths)
+            frame_processor.post_process()
+            release_resources()
+
+        # handles fps
+        if roop.globals.keep_fps:
+            update_status(f'Creating video with {roop.globals.fps} fps...')
+            write_video(current_target, part, parts, roop.globals.fps)
+        else:
+            update_status('Creating video with 30.0 fps...')
+            write_video(current_target, part, parts)
+        roop.globals.temp_frames_buffer = None
+        roop.globals.swap_face_frames = None
+        gc.collect()
+
+    # merging parts if we have more than one
+    if parts > 1:
+        update_status('Merging temporary video files...')
+        if roop.globals.keep_fps:
+            concatenate_temp_video_parts(current_target, roop.globals.fps, *tuple(part_numbers))
+        else:
+            concatenate_temp_video_parts(current_target, 30.0, *tuple(part_numbers))
+
     # handle audio
     if roop.globals.skip_audio or has_extension(current_target, ['gif']):
         move_temp(current_target, roop.globals.output_path)
@@ -284,10 +313,6 @@ def batch_process() -> None:
                     update_status('Restoring audio might cause issues as fps are not kept...')
                 restore_audio(video, roop.globals.output_path)
             clean_temp(video)
-
-
-
-
 
 
 def destroy() -> None:
