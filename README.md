@@ -1,4 +1,4 @@
-# roop-unleashed
+# roop-swap
 
 [Changelog](#changelog) • [Installation](#installation) • [Usage](#usage) • [Example](#example) • [FAQ](#faq)
 
@@ -11,6 +11,8 @@ Based on [roop](https://github.com/s0md3v/roop)
 
 ### Additional Features
 
+- In-memory processing for better speed
+- Face-enhancer process only frames that were modified by face-swapper
 - Uncensored
 - Better GUI
 - Selecting of specific faces in source/target possible
