@@ -43,6 +43,7 @@ def parse_args() -> None:
     program.add_argument('-f', '--folder', help='select a target folder with images or videos to batch process', dest='target_folder_path')
     program.add_argument('--frame-processor', help='frame processors (choices: face_swapper, face_enhancer, ...)', dest='frame_processor', default=['face_swapper'], nargs='+')
     program.add_argument('--keep-fps', help='keep target fps', dest='keep_fps', action='store_true')
+    program.add_argument('--source-fps', help='strictly set source video fps', dest='source_fps')
     program.add_argument('--keep-frames', help='keep temporary frames', dest='keep_frames', action='store_true')
     program.add_argument('--skip-audio', help='skip target audio', dest='skip_audio', action='store_true')
     program.add_argument('--many-faces', help='process every face', dest='many_faces', action='store_true')
@@ -69,6 +70,10 @@ def parse_args() -> None:
         roop.globals.frame_processors = args.frame_processor
 
     roop.globals.keep_fps = args.keep_fps
+    if args.source_fps:
+        roop.globals.fps = float(args.source_fps)
+    else:
+        roop.globals.fps = detect_fps(roop.globals.target_path)
     roop.globals.keep_frames = args.keep_frames
     roop.globals.skip_audio = args.skip_audio
     roop.globals.many_faces = args.many_faces
