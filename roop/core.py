@@ -71,9 +71,8 @@ def parse_args() -> None:
 
     roop.globals.keep_fps = args.keep_fps
     if args.source_fps:
+        roop.globals.specified_fps = True
         roop.globals.fps = float(args.source_fps)
-    else:
-        roop.globals.fps = detect_fps(roop.globals.target_path)
     roop.globals.keep_frames = args.keep_frames
     roop.globals.skip_audio = args.skip_audio
     roop.globals.many_faces = args.many_faces
@@ -176,7 +175,10 @@ def start() -> None:
 
     current_target = roop.globals.target_path
 
-    update_status('Reading source parameters and detecting fps...')
+    if roop.globals.specified_fps:
+        update_status(f'Reading source parameters and using specified fps {roop.globals.fps}...')
+    else:
+        update_status('Reading source parameters and detecting fps...')
     read_source_params()
 
     # process image to image

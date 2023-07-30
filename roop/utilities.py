@@ -117,6 +117,8 @@ def extract_frames_to_buffer(begin_frame: int = 0, end_frame: int = roop.globals
 
 
 def read_source_params() -> None:
+    if not roop.globals.specified_fps:
+        roop.globals.fps = detect_fps(roop.globals.target_path)
     cap = cv2.VideoCapture(roop.globals.target_path)
     roop.globals.frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     roop.globals.frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))

@@ -8,6 +8,7 @@ frame_count = None
 frame_width = None
 frame_height = None
 fps = None
+specified_fps = None
 temp_frames_buffer = None
 swap_face_frames = None
 frame_processors: List[str] = []
