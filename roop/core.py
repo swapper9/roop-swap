@@ -259,7 +259,7 @@ def start() -> None:
     # clean and validate
     clean_temp(current_target)
     if is_video(roop.globals.output_path):
-        update_status('Processing to video succeed!')
+        update_status(f'Processing to video succeed, video saved to {roop.globals.output_path}')
     else:
         update_status('Processing to video failed!')
 
