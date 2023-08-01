@@ -111,7 +111,9 @@ def extract_frames_to_buffer(begin_frame: int = 0, end_frame: int = roop.globals
     cap = cv2.VideoCapture(roop.globals.target_path)
     cap.set(cv2.CAP_PROP_POS_FRAMES, begin_frame)
     while fc < frame_range and ret:
-        ret, roop.globals.temp_frames_buffer[fc] = cap.read()
+        ret, frame = cap.read()
+        if frame is not None:
+            roop.globals.temp_frames_buffer[fc] = frame
         fc += 1
     cap.release()
 
