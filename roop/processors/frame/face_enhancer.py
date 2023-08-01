@@ -63,7 +63,7 @@ def enhance_face(temp_frame: Frame) -> Frame:
     return asarray(temp_frame)
 
 
-def process_frame(source_path: str, temp_frame: Frame) -> Frame:
+def process_frame(source_path: str, temp_frame: Frame, frame_number: int = 1) -> Frame:
     target_face = get_one_face(temp_frame)
     if target_face:
         temp_frame = enhance_face(temp_frame)
@@ -88,11 +88,11 @@ def process_frames(is_batch: bool, source_face: Face, target_face: Face, temp_fr
 
 
 def process_image(source_face: Face, target_face: Face, target_path: str, output_path: str) -> None:
-    target_frame = roop.globals.temp_frames_buffer[from_path_to_array_index(target_path)]
+    target_frame = cv2.imread(target_path)
     if target_frame is not None:
         result = process_frame(None, target_frame)
     if result is not None:
-        roop.globals.temp_frames_buffer[from_path_to_array_index(output_path)] = result
+        cv2.imwrite(output_path, result)
 
 
 def process_video(source_face: Any, target_face: Any, temp_frame_paths: List[str]) -> None:

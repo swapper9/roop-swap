@@ -333,7 +333,7 @@ def update_preview(frame_number: int = 0) -> None:
             if frame_processor.NAME == 'ROOP.FACE-ENHANCER':
                 continue
 
-            temp_frame = frame_processor.process_frame(source_face=roop.globals.SELECTED_FACE_DATA_INPUT, target_face=roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame=temp_frame, frame_number=1)
+            temp_frame = frame_processor.process_frame(source_face=roop.globals.SELECTED_FACE_DATA_INPUT, target_face=roop.globals.SELECTED_FACE_DATA_OUTPUT, temp_frame=temp_frame, frame_number=1, single_image=True)
             image = Image.fromarray(cv2.cvtColor(temp_frame, cv2.COLOR_BGR2RGB))
             image = ImageOps.contain(image, (PREVIEW_MAX_WIDTH, PREVIEW_MAX_HEIGHT), Image.LANCZOS)
             image = ctk.CTkImage(image, size=image.size)
